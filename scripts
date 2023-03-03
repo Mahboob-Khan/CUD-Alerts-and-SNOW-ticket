@@ -1,0 +1,165 @@
+Creating a Service Now ticket typically involves making an API call to the Service Now REST API, providing relevant details like the short description, description, urgency, impact, etc. Here's an example Bash script that can be used to create a Service Now ticket:
+
+bash
+Copy code
+#!/bin/bash
+
+# Set the Service Now API endpoint URL
+SNOW_API_URL="https://your-instance.service-now.com/api/now/table/incident"
+
+# Set the Service Now API credentials
+SNOW_USERNAME="your-username"
+SNOW_PASSWORD="your-password"
+
+# Set the ticket details
+SHORT_DESC="Ticket Short Description"
+DESC="Ticket Description"
+URGENCY="2"
+IMPACT="2"
+
+# Make the API call to create the ticket
+curl -X POST -H "Content-Type: application/json" -u "$SNOW_USERNAME:$SNOW_PASSWORD" \
+  "$SNOW_API_URL" \
+  -d '{
+    "short_description": "'"$SHORT_DESC"'",
+    "description": "'"$DESC"'",
+    "urgency": "'"$URGENCY"'",
+    "impact": "'"$IMPACT"'"
+  }'
+Note that you will need to replace the values of SNOW_API_URL, SNOW_USERNAME, and SNOW_PASSWORD with the appropriate values for your Service Now instance. You will also need to set the values of SHORT_DESC, DESC, URGENCY, and IMPACT to match the details of the ticket you wish to create.
+
+This script assumes that you have curl installed on your system, which is used to make the API call.
+
+==================================================================================================
+To hide the password 
+You can hide the password in the Bash script by using environment variables instead of hard-coding the password in the script. Here's an updated version of the script that uses environment variables for the Service Now credentials:
+
+bash
+Copy code
+#!/bin/bash
+
+# Set the Service Now API endpoint URL
+SNOW_API_URL="https://your-instance.service-now.com/api/now/table/incident"
+
+# Set the Service Now API credentials as environment variables
+export SNOW_USERNAME="your-username"
+export SNOW_PASSWORD="your-password"
+
+# Set the ticket details
+SHORT_DESC="Ticket Short Description"
+DESC="Ticket Description"
+URGENCY="2"
+IMPACT="2"
+
+# Make the API call to create the ticket
+curl -X POST -H "Content-Type: application/json" -u "$SNOW_USERNAME:$SNOW_PASSWORD" \
+  "$SNOW_API_URL" \
+  -d '{
+    "short_description": "'"$SHORT_DESC"'",
+    "description": "'"$DESC"'",
+    "urgency": "'"$URGENCY"'",
+    "impact": "'"$IMPACT"'"
+  }'
+
+# Unset the environment variables after use
+unset SNOW_USERNAME
+unset SNOW_PASSWORD
+In this version, the Service Now username and password are set as environment variables using the export command. You can then reference these variables in the curl command using the $SNOW_USERNAME and $SNOW_PASSWORD syntax.
+
+Note that after the API call is made, we unset the environment variables using the unset command to ensure that the password is not stored in memory any longer than necessary.
+
+
+
+
+
+========================any other way to hide password=====================================================
+Yes, another way to hide the Service Now password is to use a configuration file that is not version controlled or stored in a secure location. You can then reference the configuration file in your Bash script to retrieve the username and password values. Here's an example of how this can be done:
+
+Create a configuration file that contains the Service Now username and password. For example, you can create a file named config.ini with the following contents:
+makefile
+Copy code
+[ServiceNow]
+username = your-username
+password = your-password
+Modify the Bash script to read the username and password values from the configuration file. Here's an example of how you can modify the script:
+bash
+Copy code
+#!/bin/bash
+
+# Set the Service Now API endpoint URL
+SNOW_API_URL="https://your-instance.service-now.com/api/now/table/incident"
+
+# Read the Service Now API credentials from the configuration file
+SNOW_USERNAME=$(awk -F' = ' '/^username/ {print $2}' config.ini)
+SNOW_PASSWORD=$(awk -F' = ' '/^password/ {print $2}' config.ini)
+
+# Set the ticket details
+SHORT_DESC="Ticket Short Description"
+DESC="Ticket Description"
+URGENCY="2"
+IMPACT="2"
+
+# Make the API call to create the ticket
+curl -X POST -H "Content-Type: application/json" -u "$SNOW_USERNAME:$SNOW_PASSWORD" \
+  "$SNOW_API_URL" \
+  -d '{
+    "short_description": "'"$SHORT_DESC"'",
+    "description": "'"$DESC"'",
+    "urgency": "'"$URGENCY"'",
+    "impact": "'"$IMPACT"'"
+  }'
+
+# Unset the variables after use
+unset SNOW_USERNAME
+unset SNOW_PASSWORD
+In this version, we use the awk command to read the Service Now username and password values from the config.ini file. The awk command is used to extract the values after the equals sign (=) and store them in the SNOW_USERNAME and SNOW_PASSWORD variables.
+
+Note that the config.ini file should be stored in a secure location, such as your home directory or a directory that has appropriate file permissions. You can also use a different configuration file format or location, depending on your specific requirements.
+
+
+========================================using GCP secrets==================================================================== 
+Yes, it's possible to use GCP secrets to store the Service Now API credentials and retrieve them in your Bash script. Here's an example of how this can be done:
+
+Create a secret in GCP Secrets Manager that contains the Service Now username and password. You can use the following command to create a new secret:
+lua
+Copy code
+gcloud secrets create servicenow-creds --replication-policy="automatic"
+This command creates a new secret named servicenow-creds with automatic replication policy.
+
+Set the Service Now username and password as secret values in the servicenow-creds secret. You can use the following command to set the secret values:
+sql
+Copy code
+gcloud secrets versions add servicenow-creds --data-file=config.ini
+This command adds a new version of the servicenow-creds secret with the values from the config.ini file.
+
+Modify the Bash script to retrieve the Service Now username and password from the servicenow-creds secret. Here's an example of how you can modify the script:
+bash
+Copy code
+#!/bin/bash
+
+# Set the Service Now API endpoint URL
+SNOW_API_URL="https://your-instance.service-now.com/api/now/table/incident"
+
+# Retrieve the Service Now API credentials from GCP Secrets Manager
+SNOW_USERNAME=$(gcloud secrets versions access latest --secret=servicenow-creds | awk -F' = ' '/^username/ {print $2}')
+SNOW_PASSWORD=$(gcloud secrets versions access latest --secret=servicenow-creds | awk -F' = ' '/^password/ {print $2}')
+
+# Set the ticket details
+SHORT_DESC="Ticket Short Description"
+DESC="Ticket Description"
+URGENCY="2"
+IMPACT="2"
+
+# Make the API call to create the ticket
+curl -X POST -H "Content-Type: application/json" -u "$SNOW_USERNAME:$SNOW_PASSWORD" \
+  "$SNOW_API_URL" \
+  -d '{
+    "short_description": "'"$SHORT_DESC"'",
+    "description": "'"$DESC"'",
+    "urgency": "'"$URGENCY"'",
+    "impact": "'"$IMPACT"'"
+  }'
+
+# Unset the variables after use
+unset SNOW_USERNAME
+unset SNOW_PASSWORD
