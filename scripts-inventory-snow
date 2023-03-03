@@ -1,0 +1,56 @@
+#!/bin/bash
+
+# Set the Service Now API endpoint URL
+SNOW_API_URL="https://your-instance.service-now.com/api/now/attachment/file"
+
+# Retrieve the inventory data from GCP and save it to a file
+gcloud compute instances list --format=json > inventory.json
+
+# Attach the inventory data file to the Service Now ticket
+curl -X POST -H "Content-Type: multipart/form-data" -u "$SNOW_USERNAME:$SNOW_PASSWORD" \
+  "$SNOW_API_URL" \
+  -F "table_sys_id=$SNOW_TICKET_ID" \
+  -F "file=@inventory.json"
+
+# Remove the inventory data file after use
+rm inventory.json
+
+============================================================
+
+#!/bin/bash
+
+# Set the Service Now API endpoint URLs
+SNOW_CREATE_TICKET_URL="https://your-instance.service-now.com/api/now/table/incident"
+SNOW_ATTACH_FILE_URL="https://your-instance.service-now.com/api/now/attachment/file"
+
+# Set the Service Now ticket details
+SHORT_DESCRIPTION="Inventory report for GCP"
+DESCRIPTION="Attached is the inventory report for GCP"
+SEVERITY="3"
+IMPACT="3"
+URGENCY="3"
+CATEGORY="Network"
+
+# Set the attachment file name
+ATTACHMENT_FILE_NAME="inventory.csv"
+
+# Retrieve the inventory data from GCP and save it to a CSV file
+gcloud compute instances list --format='csv(name,zone,status)' > inventory.csv
+
+# Create the Service Now ticket
+RESPONSE=$(curl -s -X POST -H "Content-Type: application/json" -u "$SNOW_USERNAME:$SNOW_PASSWORD" \
+  "$SNOW_CREATE_TICKET_URL" \
+  -d "{\"short_description\": \"$SHORT_DESCRIPTION\", \"description\": \"$DESCRIPTION\", \"severity\": \"$SEVERITY\", \"impact\": \"$IMPACT\", \"urgency\": \"$URGENCY\", \"category\": \"$CATEGORY\"}")
+  
+# Parse the ticket ID from the response
+SNOW_TICKET_ID=$(echo "$RESPONSE" | jq -r '.result.sys_id')
+
+# Attach the inventory data file to the Service Now ticket
+curl -X POST -H "Content-Type: multipart/form-data" -u "$SNOW_USERNAME:$SNOW_PASSWORD" \
+  "$SNOW_ATTACH_FILE_URL" \
+  -F "table_sys_id=$SNOW_TICKET_ID" \
+  -F "file=@$ATTACHMENT_FILE_NAME"
+
+# Remove the inventory data file after use
+rm inventory.csv
+
